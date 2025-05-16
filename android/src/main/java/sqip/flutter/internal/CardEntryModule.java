@@ -69,13 +69,6 @@ final public class CardEntryModule {
   private CardDetails cardResult;
   private String paymentSourceId;
 
-  @SuppressWarnings("deprecation")
-  public CardEntryModule(PluginRegistry.Registrar registrar, final MethodChannel channel) {
-    this(channel);
-    currentActivity = registrar.activity();
-    registrar.addActivityResultListener(activityResultListener);
-  }
-
   public CardEntryModule(final MethodChannel channel) {
     reference = new AtomicReference<>();
     handler = new Handler(Looper.getMainLooper());
@@ -87,7 +80,8 @@ final public class CardEntryModule {
       @Override
       public CardEntryActivityCommand handleEnteredCardInBackground(CardDetails cardDetails) {
         if (CardEntryModule.this.contact != null) {
-          // If buyer verification needed, finish the card entry activity so we can verify buyer
+          // If buyer verification needed, finish the card entry activity so we can verify
+          // buyer
           return new CardEntryActivityCommand.Finish();
         }
 
@@ -95,12 +89,11 @@ final public class CardEntryModule {
         countDownLatch = new CountDownLatch(1);
         // must be run on the UI thread to prevent an exception
         currentActivity.runOnUiThread(
-                new Runnable() {
-                  public void run() {
-                    channel.invokeMethod("cardEntryDidObtainCardDetails", mapToReturn);
-                  }
-                }
-        );
+            new Runnable() {
+              public void run() {
+                channel.invokeMethod("cardEntryDidObtainCardDetails", mapToReturn);
+              }
+            });
         try {
           // completeCardEntry or showCardNonceProcessingError must be called,
           // otherwise the thread will be leaked.
@@ -114,7 +107,8 @@ final public class CardEntryModule {
     });
   }
 
-  public void attachActivityResultListener(final ActivityPluginBinding activityPluginBinding, final MethodChannel channel) {
+  public void attachActivityResultListener(final ActivityPluginBinding activityPluginBinding,
+      final MethodChannel channel) {
     if (activityResultListener == null) {
       activityResultListener = createActivityResultListener(channel);
     }
@@ -144,10 +138,11 @@ final public class CardEntryModule {
     result.success(null);
   }
 
-  public void startCardEntryFlowWithBuyerVerification(MethodChannel.Result result, boolean collectPostalCode, String squareLocationId, String buyerActionString, Map<String, Object> moneyMap, Map<String, Object> contactMap) {
+  public void startCardEntryFlowWithBuyerVerification(MethodChannel.Result result, boolean collectPostalCode,
+      String squareLocationId, String buyerActionString, Map<String, Object> moneyMap, Map<String, Object> contactMap) {
     SquareIdentifier squareIdentifier = new SquareIdentifier.LocationToken(squareLocationId);
 
-    Money money = getMoney(moneyMap);
+    Money money = moneyMap != null ? getMoney(moneyMap) : null;
     BuyerAction buyerAction = getBuyerAction(buyerActionString, money);
     Contact contact = getContact(contactMap);
 
@@ -159,10 +154,11 @@ final public class CardEntryModule {
     result.success(null);
   }
 
-  public void startBuyerVerificationFlow(MethodChannel.Result result, String buyerActionString, Map<String, Object> moneyMap, String squareLocationId, Map<String, Object> contactMap, String paymentSourceId) {
+  public void startBuyerVerificationFlow(MethodChannel.Result result, String buyerActionString,
+      Map<String, Object> moneyMap, String squareLocationId, Map<String, Object> contactMap, String paymentSourceId) {
     SquareIdentifier squareIdentifier = new SquareIdentifier.LocationToken(squareLocationId);
 
-    Money money = getMoney(moneyMap);
+    Money money = moneyMap != null ? getMoney(moneyMap) : null;
     BuyerAction buyerAction = getBuyerAction(buyerActionString, money);
     Contact contact = getContact(contactMap);
 
@@ -170,7 +166,8 @@ final public class CardEntryModule {
     this.buyerAction = buyerAction;
     this.contact = contact;
     this.paymentSourceId = paymentSourceId;
-    VerificationParameters verificationParameters = new VerificationParameters(this.paymentSourceId, this.buyerAction, this.squareIdentifier, this.contact);
+    VerificationParameters verificationParameters = new VerificationParameters(this.paymentSourceId, this.buyerAction,
+        this.squareIdentifier, this.contact);
     BuyerVerification.verify(currentActivity, verificationParameters);
     result.success(null);
   }
@@ -188,21 +185,21 @@ final public class CardEntryModule {
     Object region = contactMap.get("region");
     Country country = Country.valueOf((countryCode != null) ? countryCode.toString() : "US");
     return new Contact.Builder()
-            .familyName((familyName != null) ? familyName.toString() : "")
-            .email((email != null) ? email.toString() : "")
-            .addressLines((addressLines != null) ? (ArrayList<String>) addressLines : new ArrayList<String>())
-            .city((city != null) ? city.toString() : "")
-            .countryCode(country)
-            .postalCode((postalCode != null) ? postalCode.toString() : "")
-            .phone((phone != null) ? phone.toString() : "")
-            .region((region != null) ? region.toString() : "")
-            .build((givenName != null) ? givenName.toString() : "");
+        .familyName((familyName != null) ? familyName.toString() : "")
+        .email((email != null) ? email.toString() : "")
+        .addressLines((addressLines != null) ? (ArrayList<String>) addressLines : new ArrayList<String>())
+        .city((city != null) ? city.toString() : "")
+        .countryCode(country)
+        .postalCode((postalCode != null) ? postalCode.toString() : "")
+        .phone((phone != null) ? phone.toString() : "")
+        .region((region != null) ? region.toString() : "")
+        .build((givenName != null) ? givenName.toString() : "");
   }
 
   private Money getMoney(Map<String, Object> moneyMap) {
     return new Money(
-            ((Integer) moneyMap.get("amount")).intValue(),
-            sqip.Currency.valueOf((String) moneyMap.get("currencyCode")));
+        ((Integer) moneyMap.get("amount")).intValue(),
+        sqip.Currency.valueOf((String) moneyMap.get("currencyCode")));
   }
 
   private BuyerAction getBuyerAction(String buyerActionString, Money money) {
@@ -217,7 +214,8 @@ final public class CardEntryModule {
 
   private PluginRegistry.ActivityResultListener createActivityResultListener(MethodChannel channel) {
     return new PluginRegistry.ActivityResultListener() {
-      @Override public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+      @Override
+      public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == CardEntry.DEFAULT_CARD_ENTRY_REQUEST_CODE) {
           CardEntry.handleActivityResult(data, new Callback<CardEntryActivityResult>() {
             @Override
@@ -225,7 +223,9 @@ final public class CardEntryModule {
               if (cardEntryActivityResult.isSuccess() && CardEntryModule.this.contact != null) {
                 cardResult = cardEntryActivityResult.getSuccessValue();
                 String paymentSourceId = cardResult.getNonce();
-                VerificationParameters verificationParameters = new VerificationParameters(paymentSourceId, CardEntryModule.this.buyerAction, CardEntryModule.this.squareIdentifier, CardEntryModule.this.contact);
+                VerificationParameters verificationParameters = new VerificationParameters(paymentSourceId,
+                    CardEntryModule.this.buyerAction, CardEntryModule.this.squareIdentifier,
+                    CardEntryModule.this.contact);
                 BuyerVerification.verify(currentActivity, verificationParameters);
               } else {
                 // flutter UI doesn't know the context of fade_out animation
@@ -251,19 +251,22 @@ final public class CardEntryModule {
         if (requestCode == BuyerVerification.DEFAULT_BUYER_VERIFICATION_REQUEST_CODE) {
           BuyerVerification.handleActivityResult(data, result -> {
             if (result.isSuccess()) {
-              if(CardEntryModule.this.paymentSourceId == null) {
+              if (CardEntryModule.this.paymentSourceId == null) {
                 Map<String, Object> mapToReturn = cardDetailsConverter.toMapObject(CardEntryModule.this.cardResult);
                 mapToReturn.put("token", result.getSuccessValue().getVerificationToken());
+                mapToReturn.put("didChallengeUser", result.getSuccessValue().getHasChallengedUser());
                 channel.invokeMethod("onBuyerVerificationSuccess", mapToReturn);
-              }else{
+              } else {
                 Map<String, Object> mapToReturn = new LinkedHashMap<>();
                 mapToReturn.put("nonce", CardEntryModule.this.paymentSourceId);
                 mapToReturn.put("token", result.getSuccessValue().getVerificationToken());
+                mapToReturn.put("didChallengeUser", result.getSuccessValue().getHasChallengedUser());
                 channel.invokeMethod("onBuyerVerificationSuccess", mapToReturn);
               }
             } else if (result.isError()) {
               Error error = result.getErrorValue();
-              Map<String, String> errorMap = ErrorHandlerUtils.getCallbackErrorObject(error.getCode().name(), error.getMessage(), error.getDebugCode(), error.getDebugMessage());
+              Map<String, String> errorMap = ErrorHandlerUtils.getCallbackErrorObject(error.getCode().name(),
+                  error.getMessage(), error.getDebugCode(), error.getDebugMessage());
               channel.invokeMethod("onBuyerVerificationError", errorMap);
             }
           });
